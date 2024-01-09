@@ -15,6 +15,8 @@ var (
 	endpoint     string
 	accessKey    string
 	accessSecret string
+	bucketName   string
+	uploadFile   string
 )
 
 var UploadCmd = &cobra.Command{
@@ -29,18 +31,28 @@ var UploadCmd = &cobra.Command{
 		)
 		switch ossProvider {
 		case "local":
-			localminio.NewLocalminioStore(&localminio.Options{
+			uploader, err = localminio.NewLocalminioStore(&localminio.Options{
 				Endpoint:        endpoint,
 				AccessKeyID:     accessKey,
 				SecretAccessKey: accessSecret,
 			})
 		case "aliyun":
-			aliyun.NewAliOssStore(&aliyun.Options{})
+			uploader, err = aliyun.NewAliOssStore(&aliyun.Options{
+				Endpoint:     endpoint,
+				AccessKey:    accessKey,
+				AccessSecret: accessSecret,
+			})
 		case "txyun":
-			txyun.NewTxyunStore()
+			uploader = txyun.NewTxyunStore()
 		default:
 			return fmt.Errorf("oss provider %s not support", ossProvider)
 		}
+		if err != nil {
+			return err
+		}
+
+		//使用uploader上传文件
+		uploader.Upload(bucketName, uploadFile, uploadFile)
 		return nil
 	},
 }
@@ -49,8 +61,9 @@ func init() {
 	f := UploadCmd.PersistentFlags()
 	f.StringVarP(&ossProvider, "provider", "p", "local", "oss storage provider [aliyun/txyun/minio]")
 	f.StringVarP(&endpoint, "endpoint", "e", "http://minio.kkk987happy.com", "oss storage provider endpoint")
-	f.StringVarP(&accessKey, "accessKey", "a", "", "oss storage provider accessKey")
-	f.StringVarP(&accessSecret, "accessSecret", "s", "", "oss storage provider accessSecret")
-
+	f.StringVarP(&accessKey, "access_key", "a", "", "oss storage provider accessKey")
+	f.StringVarP(&accessSecret, "access_secret", "s", "", "oss storage provider accessSecret")
+	f.StringVarP(&bucketName, "bucket_name", "b", "", "oss storage provider bucket")
+	f.StringVarP(&uploadFile, "file_name", "f", "", "oss storage provider file")
 	RootCmd.AddCommand(UploadCmd)
 }
