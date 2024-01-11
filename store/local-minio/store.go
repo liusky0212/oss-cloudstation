@@ -15,7 +15,8 @@ import (
 )
 
 type LocalminioStore struct {
-	client *minio.Client
+	client           *minio.Client
+	ProgressListener ProgressListener
 }
 
 type Options struct {
@@ -102,6 +103,7 @@ func uploadfile(localminioStore *LocalminioStore, bucketName, objectKey, uploadF
 	// log.Printf("%#v\n", localminioStore.client)
 	// log.Println(bucketName, objectKey, file, fileStat.Size())
 	log.Println(localminioStore.client.EndpointURL().User.Username())
+
 	uploadInfo, err := localminioStore.client.PutObject(context.Background(), bucketName, objectKey, file, fileStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Println(err)
