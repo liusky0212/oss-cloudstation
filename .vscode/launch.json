@@ -12,7 +12,7 @@
             "mode": "debug",
             "program": "${fileDirname}",
             "showLog": true,
-             "envFile": "${workspaceFolder}/env/test.env"
+            "envFile": "${workspaceFolder}/env/test.env"
         }
 
     ]

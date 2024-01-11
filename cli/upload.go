@@ -17,6 +17,13 @@ var (
 	accessSecret string
 	bucketName   string
 	uploadFile   string
+	useSSL       bool
+)
+
+// 默认ak和sk
+const (
+	default_ak = "LTAI4G2Z5Y8Q6Z2Y"
+	default_sk = "5Z5Y8Q6Z2Y8Q6Z2Y"
 )
 
 var UploadCmd = &cobra.Command{
@@ -32,11 +39,20 @@ var UploadCmd = &cobra.Command{
 		switch ossProvider {
 		case "local":
 			uploader, err = localminio.NewLocalminioStore(&localminio.Options{
-				Endpoint:        endpoint,
-				AccessKeyID:     accessKey,
-				SecretAccessKey: accessSecret,
+				OSSInfo: &store.OSSInfo{
+					Endpoint:     endpoint,
+					AccessKey:    accessKey,
+					AccessSecret: accessSecret,
+				},
+				UseSSL: useSSL,
 			})
 		case "aliyun":
+			aliOpts := &aliyun.Options{
+				Endpoint:     endpoint,
+				AccessKey:    accessKey,
+				AccessSecret: accessSecret,
+			}
+			setAliDefault(aliOpts)
 			uploader, err = aliyun.NewAliOssStore(&aliyun.Options{
 				Endpoint:     endpoint,
 				AccessKey:    accessKey,
@@ -57,6 +73,16 @@ var UploadCmd = &cobra.Command{
 	},
 }
 
+func setAliDefault(opts *aliyun.Options) {
+	if opts.AccessKey == "" {
+		opts.AccessKey = default_ak
+	}
+
+	if opts.AccessSecret == "" {
+		opts.AccessSecret = default_sk
+	}
+}
+
 func init() {
 	f := UploadCmd.PersistentFlags()
 	f.StringVarP(&ossProvider, "provider", "p", "local", "oss storage provider [aliyun/txyun/minio]")
@@ -65,5 +91,6 @@ func init() {
 	f.StringVarP(&accessSecret, "access_secret", "s", "", "oss storage provider accessSecret")
 	f.StringVarP(&bucketName, "bucket_name", "b", "", "oss storage provider bucket")
 	f.StringVarP(&uploadFile, "file_name", "f", "", "oss storage provider file")
+	f.BoolVarP(&useSSL, "use_ssl", "", false, "oss storage use ssl")
 	RootCmd.AddCommand(UploadCmd)
 }

@@ -58,8 +58,8 @@ func NewAliOssStore(opts *Options) (*AliOssStore, error) {
 		return nil, err
 	}
 	return &AliOssStore{
-		client: c,
-		//listener: NewDefaultProgressListener(),
+		client:   c,
+		listener: NewDefaultProgressListener(),
 	}, nil
 }
 

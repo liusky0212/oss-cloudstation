@@ -19,11 +19,11 @@ type LocalminioStore struct {
 }
 
 type Options struct {
-	Endpoint        string
-	AccessKeyID     string
-	SecretAccessKey string
-	UseSSL          bool
-	Region          string
+	// Endpoint        string
+	// AccessKeyID     string
+	// SecretAccessKey string
+	UseSSL  bool
+	OSSInfo *localminio.OSSInfo // 匿名结构体，继承OSSInfo结构体
 }
 
 var (
@@ -33,16 +33,17 @@ var (
 
 // 参数校验
 func (o *Options) Validate() error {
-	if o.Endpoint == "" {
+	if o.OSSInfo.Endpoint == "" {
 		return fmt.Errorf("minio地址为空")
 	}
-	if o.AccessKeyID == "" || o.SecretAccessKey == "" {
+	if o.OSSInfo.AccessKey == "" || o.OSSInfo.AccessSecret == "" {
 		return fmt.Errorf("accessKeyID 或 secretAccessKey 为空")
 	}
 	return nil
 }
 
-// localminioStore构造函数，接受一个 Options 结构体作为参数，这个结构体包含了创建 MinIO 客户端所需的所有配置信息
+// localminioStore构造函数
+// 接受一个 Options 结构体作为参数，这个结构体包含了创建 MinIO 客户端所需的所有配置信息
 func NewLocalminioStore(opts *Options) (*LocalminioStore, error) {
 	//校验参数
 	if err := opts.Validate(); err != nil {
@@ -50,32 +51,34 @@ func NewLocalminioStore(opts *Options) (*LocalminioStore, error) {
 	}
 
 	//NEW minioClient
-	minioClient, err := minio.New(opts.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(opts.AccessKeyID, opts.SecretAccessKey, ""),
+	minioClient, err := minio.New(opts.OSSInfo.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(opts.OSSInfo.AccessKey, opts.OSSInfo.AccessSecret, ""),
 		Secure: opts.UseSSL,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	//log.Printf("%#v\n", minioClient) // minioClient is now setup
+	log.Printf("%#v\n", minioClient) // minioClient is now setup
 	log.Printf("minio实例创建成功")
 	return &LocalminioStore{
 		client: minioClient,
 	}, nil
 }
 
-// 使用环境变量，创建一个 LocalminioStore 实例
-func NewDefaultLocalminioStore() (*LocalminioStore, error) {
+// 使用环境变量创建 LocalminioStore 实例
+func NewDefaultLocalminioStore(opts *Options) (*LocalminioStore, error) {
 	useSSL, err := strconv.ParseBool(os.Getenv("MINIO_USESSL"))
 	if err != nil {
 		return nil, err
 	}
 	return NewLocalminioStore(&Options{
-		Endpoint:        os.Getenv("MINIO_SERVER"),
-		AccessKeyID:     os.Getenv("MINIO_AK"),
-		SecretAccessKey: os.Getenv("MINIO_SK"),
-		UseSSL:          useSSL,
+		OSSInfo: &localminio.OSSInfo{
+			Endpoint:     os.Getenv("MINIO_SERVER"),
+			AccessKey:    os.Getenv("MINIO_AK"),
+			AccessSecret: os.Getenv("MINIO_SK"),
+		},
+		UseSSL: useSSL,
 	})
 }
 
@@ -96,7 +99,9 @@ func uploadfile(localminioStore *LocalminioStore, bucketName, objectKey, uploadF
 		return err
 	}
 	log.Printf("获取上传文件stat成功")
-
+	// log.Printf("%#v\n", localminioStore.client)
+	// log.Println(bucketName, objectKey, file, fileStat.Size())
+	log.Println(localminioStore.client.EndpointURL().User.Username())
 	uploadInfo, err := localminioStore.client.PutObject(context.Background(), bucketName, objectKey, file, fileStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		fmt.Println(err)
